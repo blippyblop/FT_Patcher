@@ -1,0 +1,62 @@
+name: Windows release build
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: win-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Build FT-Patcher (PyInstaller onedir)
+        working-directory: Tools
+        run: python -m PyInstaller ft_patcher.spec --noconfirm --clean
+
+      - name: Copy README into the bundle
+        run: Copy-Item .\Tools\README.md .\Tools\dist\FT-Patcher\README.md -Force
+
+      - name: Verify the built app (selftest)
+        working-directory: Tools
+        run: |
+          $log = "selftest_out.log"
+          $err = "selftest_err.log"
+          $p = Start-Process -FilePath ".\dist\FT-Patcher\FT-Patcher.exe" -ArgumentList "--selftest" -RedirectStandardOutput $log -RedirectStandardError $err -Wait -PassThru
+          Write-Host "exit code: $($p.ExitCode)"
+          Get-Content $log -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) {
+            Write-Host "----- stderr -----"
+            Get-Content $err -ErrorAction SilentlyContinue
+            throw "FT-Patcher selftest failed (exit $($p.ExitCode))"
+          }
+          Write-Host "selftest passed"
+
+      - name: Zip the onedir bundle
+        run: |
+          Compress-Archive -Path .\Tools\dist\FT-Patcher -DestinationPath FT-Patcher-win.zip -Force
+          $z = Get-Item FT-Patcher-win.zip
+          Write-Host "built ${z.Name} ($($z.Length) bytes)"
+          Write-Host "sha256: $((Get-FileHash FT-Patcher-win.zip -Algorithm SHA256).Hash)"
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" .\FT-Patcher-win.zip --clobber
