@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Build / packaging outputs (regenerated via build_windows.bat / PyInstaller) ---
+build/
+dist/
+_internal/
+FT-Patcher/
+FT-Patcher-win/
+FT-Patcher-win.zip
+
+# --- Local backups written by the patchers ---
+*.bak
+*.bak2
+*.bak3
+*.preft-backup
+
+# --- Logs / scratch ---
+*.log
+*.tmp
+*.traceback
+ftdebug.txt
+
+# --- Editor / OS noise ---
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
