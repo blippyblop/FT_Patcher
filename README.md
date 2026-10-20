@@ -36,6 +36,8 @@ Dry run - This runs the validation code without actually patching the fbx files.
 
 # Changelog 
 
+1.2 - Fixed FBX export scale for avatar files saved in meter units (e.g. the schuul variant): the output now matches the source file's unit scale. The exporter runs with a global scale derived from the source's UnitScaleFactor (1 = cm, 100 = m, anything else supported too), so every node transform lands on the source's own values, and the output file's unit declaration is re-tagged to the source's. Files in centimeter units export exactly as before.
+
 1.1 - The "Force resample on custom mesh" checkbox now only appears when Shape Key Transfer is selected.
 
 1.0 - First release. 
