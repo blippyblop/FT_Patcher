@@ -204,10 +204,6 @@ class FTGui:
         tk.Checkbutton(o, variable=self.meta_var,
                        text="Patch meta file"
                        ).pack(anchor="w")
-        self.force_xfer_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(o, variable=self.force_xfer_var,
-                       text="Force resample on custom mesh"
-                       ).pack(anchor="w")
         tk.Label(o, text="Mode:", font=("", 9, "bold"), anchor="w").pack(anchor="w", pady=(6, 0))
         self.mode_var = tk.StringVar(value="transfer")
         tk.Radiobutton(o, variable=self.mode_var, value="transfer",
@@ -216,6 +212,11 @@ class FTGui:
         tk.Radiobutton(o, variable=self.mode_var, value="swap",
                        text="Head Swap"
                        ).pack(anchor="w")
+        self.force_xfer_var = tk.BooleanVar(value=False)
+        self.force_xfer_cb = tk.Checkbutton(o, variable=self.force_xfer_var,
+                                            text="Force resample on custom mesh")
+        self.force_xfer_cb.pack(anchor="w")
+        self.mode_var.trace_add("write", self._sync_force_xfer)
         tk.Label(o, text="Backup location (recommended: a folder OUTSIDE your Unity project):",
                  font=("", 9, "bold"), anchor="w").pack(anchor="w", pady=(6, 0))
         b = tk.Frame(o)
@@ -243,6 +244,12 @@ class FTGui:
         self.log_text = scrolledtext.ScrolledText(lg, height=10, state="disabled",
                                                   font=("Consolas", 9))
         self.log_text.pack(fill="both", expand=True)
+
+    def _sync_force_xfer(self, *_a):
+        if self.mode_var.get() == "transfer":
+            self.force_xfer_cb.pack(anchor="w")
+        else:
+            self.force_xfer_cb.pack_forget()
 
     def _detect_blender(self):
         installs = find_blender_installs()
@@ -524,8 +531,8 @@ class FTGui:
         original = self.original_var.get().strip()
         backup_dir = self.backup_var.get().strip()
         patch_meta = self.meta_var.get()
-        force_xfer = self.force_xfer_var.get()
         mode = self.mode_var.get()
+        force_xfer = self.force_xfer_var.get() and mode == "transfer"
 
         n_ok = n_total = 0
         for custom in list(self.custom_files):

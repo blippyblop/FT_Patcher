@@ -46,9 +46,10 @@ provided for the rest of the platform.
      edits to them are lost).
 7. **Patch meta file** — if `<file>.fbx.meta` sits next to the FBX (as in a
    Unity project), also apply the text-based meta patch (eye-rotation limits).
-8. **Force resample on custom mesh** — only meaningful for Shape Key
-   Transfer: apply the resample even if its safety check says the topology
-   differs too much (best effort — shapes may warp or lose detail).
+8. **Force resample on custom mesh** — only shown when **Shape Key
+   Transfer** is selected: apply the resample even if its safety check says
+   the topology differs too much (best effort — shapes may warp or lose
+   detail).
 9. **Backup location** — a folder, preferably **outside your Unity project**,
    where a copy of each file is written before it is modified. Leave blank to
    get `file.fbx.bak` / `.bak2` next to each file instead.

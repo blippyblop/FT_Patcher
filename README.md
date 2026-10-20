@@ -36,4 +36,6 @@ Dry run - This runs the validation code without actually patching the fbx files.
 
 # Changelog 
 
+1.1 - The "Force resample on custom mesh" checkbox now only appears when Shape Key Transfer is selected.
+
 1.0 - First release. 
