@@ -19,3 +19,21 @@ Just run the GUI. Put in
 
 Select if you want 'best effort' or a headswap (headswap is more reliable but is an entire headswap)
 Make sure the .meta and meta diffs are included since there's meta-file tuning. It's not mandatory but it just chekcks the same folder. 
+
+# What do the options mean
+
+Patch Meta File - Hdiffs also come with a diff for patching the meta file with some bone-value tweaks. This applies those too. 
+
+Force resample on custom mesh - Only applies in shape key transfer mode - if your mesh fails the validation checks you can just force it and see if it works. 
+
+Mode:
+
+Shape Key Transfer- This is 'best effort' trying to push the blendshapes onto your mesh. If you do this, check the shapekeys manually since if there was any edited mesh it'll break it.
+
+Head Swap - The more robust option but it relies on a clean headswap being viable.
+
+Dry run - This runs the validation code without actually patching the fbx files. useful if you're not sure if your head mesh is identical or not.
+
+# Changelog 
+
+1.0 - First release. 
