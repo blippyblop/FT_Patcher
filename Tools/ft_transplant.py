@@ -99,6 +99,7 @@ import array
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -692,6 +693,50 @@ def _scan_transfer(src_norm, src_rad, radius, custom_inv, cands_named):
     return chosen, best
 
 
+def _fbx_unit_scale_factor(data):
+    """Read UnitScaleFactor from a binary FBX (6.1/7.x alike): the double
+    stored right after the PS "UnitScaleFactor" entry. Returns None if not
+    found. 1.0 == centimeters, 100.0 == meters."""
+    L = len(b"UnitScaleFactor")
+    off = 0
+    while True:
+        i = data.find(b"UnitScaleFactor", off)
+        if i < 0:
+            return None
+        off = i + 1
+        if data[max(0, i - 8):i] == b"Original":
+            continue
+        d = i + L + 27
+        if d + 9 > len(data) or data[d] != 0x44:  # 0x44 == 'D'
+            continue
+        return struct.unpack_from("<d", data, d + 1)[0]
+
+
+def _fbx_mark_meters(data):
+    """Rewrite UnitScaleFactor + OriginalUnitScaleFactor to 100.0 (meters).
+    Only touches a file that currently declares centimeters (~1.0)."""
+    cur = _fbx_unit_scale_factor(data)
+    if cur is None or abs(cur - 1.0) > 0.01:
+        return data
+    out = bytearray(data)
+    new = struct.pack("<d", 100.0)
+    for name in (b"UnitScaleFactor", b"OriginalUnitScaleFactor"):
+        L = len(name)
+        off = 0
+        while True:
+            i = out.find(name, off)
+            if i < 0:
+                break
+            off = i + 1
+            if name == b"UnitScaleFactor" and out[max(0, i - 8):i] == b"Original":
+                continue
+            d = i + L + 27
+            if d + 9 > len(out) or out[d] != 0x44:
+                continue
+            out[d + 1:d + 9] = new
+    return bytes(out)
+
+
 def main():
     args = parse_args()
     original = Path(args.original).expanduser().resolve()
@@ -709,6 +754,17 @@ def main():
     print("original : %s" % original)
     print("custom   : %s" % custom_path)
     print("out      : %s" % out_path)
+    # FBX "UnitScaleFactor": 1.0 = centimeters, 100.0 = meters. Blender's
+    # FBX exporter writes a cm-convention file for shape-key scenes no matter
+    # what, so a meter-scale source (e.g. the schuul variant) would come out
+    # 100x too large. Detect the source convention and export with
+    # global_scale=0.01 so every node transform lands on the source's own
+    # values, then re-tag the output file as meters afterwards.
+    src_usf = _fbx_unit_scale_factor(custom_path.read_bytes())
+    src_meters = src_usf is not None and src_usf > 1.0
+    print("source units: %s" % ("meters" if src_meters
+                                else "centimeters" if src_usf is not None
+                                else "unknown (treating as cm)"))
 
     if args.ft:
         ft_path = Path(args.ft).expanduser().resolve()
@@ -1062,7 +1118,7 @@ def main():
               use_mesh_modifiers=False,
               bake_space_transform=False,
               path_mode="AUTO",
-              global_scale=1.0)
+              global_scale=0.01 if src_meters else 1.0)
     kw["use_anim" if "use_anim" in valid else "bake_anim"] = args.keep_anim
     op(**{k: v for k, v in kw.items() if k in valid})
     size = out_path.stat().st_size if out_path.is_file() else -1
@@ -1070,6 +1126,20 @@ def main():
     if size <= 0:
         print("error: export produced no file", file=sys.stderr)
         sys.exit(1)
+    if src_meters:
+        # The exporter always tags shape-key exports as centimeters; the
+        # 0.01 global scale already put every value on the meter grid, so
+        # just re-tag the unit declaration to match the source file.
+        data = out_path.read_bytes()
+        out_usf = _fbx_unit_scale_factor(data)
+        if out_usf is not None and abs(out_usf - 1.0) < 0.01:
+            out_path.write_bytes(_fbx_mark_meters(data))
+            print("unit fix: retagged export centimeters -> meters (source is meter-scale)")
+        elif out_usf is not None and abs(out_usf - 100.0) < 1.0:
+            pass  # exporter already wrote a meters-convention file
+        else:
+            print("warning: export declared UnitScaleFactor=%s; expected ~1.0 or ~100.0"
+                  % out_usf, file=sys.stderr)
     if total_swapped:
         swapped_names = ", ".join(r["cn"] for r in to_apply if r["mode"] == "swap")
         print("OK: %d mesh(es) swapped to the good sample (%s); %d shape key(s)"
