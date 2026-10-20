@@ -9,8 +9,7 @@ shape-key support; no pip dependencies -- Blender ships its own Python):
         --custom MyAvatar.fbx \
         --out MyAvatar_FT.fbx
 
-If you already produced the FT FBX with ft_patch.py, pass it directly instead
-of --diff:
+If you already have a pre-built FT FBX, pass it directly instead of --diff:
 
     blender --background --python ft_transplant.py -- \
         --original "Linne1.03.fbx" --ft "Linne FT.fbx" --custom MyAvatar.fbx

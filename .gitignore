@@ -6,7 +6,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# --- Build / packaging outputs (regenerated via build_windows.bat / PyInstaller) ---
+# --- Build / packaging outputs (regenerated via PyInstaller) ---
 build/
 dist/
 _internal/

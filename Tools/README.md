@@ -108,8 +108,7 @@ blender --background --python ft_transplant.py -- \
     [--mesh NAME] [--transfer-radius X] [--keep-anim] [--dry-run] [--verbose]
 ```
 
-- `--ft PATH` — use a pre-built FT FBX instead of `--diff` (see `ft_patch.py`
-  to build one).
+- `--ft PATH` — use a pre-built FT FBX instead of `--diff`.
 - `--mesh NAME` — force the target mesh in the custom file (only when
   exactly one mesh gains shapes).
 - `--hpatchz PATH` — legacy fallback: an external hpatchz executable, only
@@ -120,15 +119,9 @@ blender --background --python ft_transplant.py -- \
 
 Other scripts:
 
-- `ft_patch.py` — applies an hdiff to the *original* FBX (with base-hash and
-  output verification) to produce the FT FBX; patches the sibling `.meta`
-  when a matching `<diff>Meta.hdiff` exists.
 - `ft_meta_patch.py` — standalone text patcher for the eye-limit lines in an
   FBX's `.meta` file (no Blender, no binary diffing):
   `python3 ft_meta_patch.py your.fbx [--dry-run]`.
-- `Editor/HashFT_Merger.cs` — Unity editor window (`Tools/Hash/FT Merger`)
-  for copying FT data between a source and a target avatar inside Unity;
-  an alternative workflow if you prefer to stay in Unity.
 
 ## Building the Windows package
 
@@ -150,9 +143,6 @@ Tools/
   ft_gui.py            GUI front-end (packaged as FT-Patcher.exe)
   ft_transplant.py     the Blender script that does the FBX work
   ft_hpatchz.py        pure-Python HDiffPatch patch applier (no binary needed)
-  ft_patch.py          CLI: apply an hdiff to the original FBX
   ft_meta_patch.py     CLI: patch an FBX .meta file (text)
   ft_patcher.spec      PyInstaller spec for the Windows package
-  build_windows.bat    convenience build script (Windows)
-  Editor/HashFT_Merger.cs   Unity editor helper (separate workflow)
 ```

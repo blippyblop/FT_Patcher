@@ -8,8 +8,8 @@ opens it without a console window):
     python ft_gui.py
 
 Or use the packaged Windows build (no Python needed on the target machine):
-build with  python -m PyInstaller ft_patcher.spec --noconfirm  (see
-build_windows.bat), then share the dist/FT-Patcher folder. The packaged app
+build with  python -m PyInstaller ft_patcher.spec --noconfirm, then share the
+dist/FT-Patcher folder. The packaged app
 bundles ft_transplant.py plus the pure-Python patcher (ft_hpatchz.py); no
 hpatchz binary is required, and only Blender itself is still needed at run
 time.

@@ -8,7 +8,7 @@ only, no external dependencies). It is byte-for-byte equivalent to running:
 
     hpatchz  oldPath  diffFile  outNewPath
 
-The GUI / ``ft_transplant.py`` / ``ft_patch.py`` import this module and call
+The GUI / ``ft_transplant.py`` import this module and call
 :func:`apply_patch_file` instead of spawning the ``hpatchz`` executable, so
 the packaged tool no longer ships a platform ``hpatchz`` binary — only Blender
 itself is still required at run time.
