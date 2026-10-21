@@ -34,6 +34,10 @@ Head Swap - The more robust option but it relies on a clean headswap being viabl
 
 Dry run - This runs the validation code without actually patching the fbx files. useful if you're not sure if your head mesh is identical or not.
 
+# Just give me the exe, nerd
+
+It's in releases. Look for it on the right hand side panel thing.
+
 # Changelog 
 
 1.2 - Fixed FBX export scale for avatar files saved in meter units (e.g. the schuul variant): the output now matches the source file's unit scale. The exporter runs with a global scale derived from the source's UnitScaleFactor (1 = cm, 100 = m, anything else supported too), so every node transform lands on the source's own values, and the output file's unit declaration is re-tagged to the source's. Files in centimeter units export exactly as before.
