@@ -51,8 +51,14 @@ What it does:
   5. If the exact match fails and the resample safety check fails too, the
      tool aborts. Pass --force-transfer to apply the resample anyway (best
      effort -- shapes may warp or lose detail).
-  6. Add the new shape keys to the matched meshes (existing shape keys are
-     preserved; shape names that already exist are skipped).
+   6. Add the new shape keys to the matched meshes (existing shape keys are
+      preserved; shape names that already exist are skipped). The mesh's
+      shape key stack is then reordered so that the FT file's stack (old +
+      new keys, in the FT file's order) forms the exact prefix of the
+      output stack; keys that exist only in the custom file are kept but
+      moved to the end. Without this, a custom-only key left in the middle
+      of the stack shifts every later key by one slot, which breaks any
+      rig that references shape keys by stack position.
   7. Before exporting, the result file's meshes and materials are renamed
      to their clean names (any .001/.002 dedup suffixes Blender attaches
      when several files are loaded at once -- including leftovers an
@@ -395,6 +401,51 @@ def shape_offsets(obj, key_name):
     return a
 
 
+def align_shape_stack(obj, ft_order):
+    """Reorder the mesh's shape key stack so that `ft_order` (shape key
+    names, in the FT file's stack order) forms the exact prefix of the
+    stack. Keys present on the mesh but absent from `ft_order` (custom-only
+    extras) are kept but moved to the end, in their current relative
+    order. Returns (extras_moved, missing_from_ft)."""
+    me = obj.data
+    if me.shape_keys is None:
+        return [], []
+    blocks = me.shape_keys.key_blocks
+    current = [k.name for k in blocks][1:]  # skip Basis
+    have = set(current)
+    prefix = [s for s in ft_order if s in have]
+    pset = set(prefix)
+    extras = [s for s in current if s not in pset]
+    missing = [s for s in ft_order if s not in have]
+    desired = prefix + extras
+    if desired == current:
+        return extras, missing
+    # Capture each key's final per-vertex coordinates, drop the whole stack
+    # (Blender 5.x removed per-key block removal), then re-add the keys in
+    # the desired order. ops work on the active scene, so point it at this
+    # object's scene for the duration of the rebuild.
+    saved = {}
+    for k in blocks[1:]:
+        saved[k.name] = [Vector((v.co.x, v.co.y, v.co.z)) for v in k.data]
+    win = bpy.context.window_manager.windows[0]
+    prev_scene = win.scene
+    win.scene = next(s for s in bpy.data.scenes
+                     if any(o is obj for o in s.objects))
+    bpy.context.view_layer.update()
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.ops.object.shape_key_remove(all=True, apply_mix=False)
+    obj.shape_key_add(name="Basis", from_mix=False)
+    win.scene = prev_scene
+    for name in desired:
+        kb = obj.shape_key_add(name=name, from_mix=False)
+        data = saved[name]
+        for i in range(len(data)):
+            kb.data[i].co = data[i]
+    return extras, missing
+
+
 def _vecs(rest, n):
     return [Vector((rest[3 * i], rest[3 * i + 1], rest[3 * i + 2])) for i in range(n)]
 
@@ -626,12 +677,21 @@ def swap_into(src_obj, tgt_obj, verbose=False):
     tgt_names = [m.name if m else "" for m in tgt_me.materials]
     mapping = match_materials(src_names, tgt_names)
     if any(j is not None for _s, j in mapping):
+        # Clearing the slot list makes Blender (5.x) drop the mesh's
+        # material_index attribute and zero every polygon's material, so the
+        # exporter collapses the map to a single AllSame index and the other
+        # material(s) end up on no polygons. Capture the per-polygon
+        # assignments first and write them back after rebuilding the slots
+        # (slot order below mirrors the source's, so the values stay valid).
+        poly_mats = [p.material_index for p in new_me.polygons]
         new_me.materials.clear()
         for _s, j in mapping:
             if j is not None:
                 new_me.materials.append(tgt_me.materials[j])
             else:
                 new_me.materials.append(None)
+        for i, p in enumerate(new_me.polygons):
+            p.material_index = poly_mats[i]
         tgt_mat_names = [tgt_names[j] if j is not None else "(none)"
                          for _s, j in mapping]
         if verbose or len(mapping) <= 4:
@@ -1105,6 +1165,21 @@ def main():
         how = "resampled" if xfer is not None else "applied"
         print("      apply: %r: +%d shape key(s) (%d pre-existing skipped), %s on %d vertices"
               % (cn, added_here, len(d["payload"]) - added_here, how, n))
+        extras, missing = align_shape_stack(obj, ft_inv[d["name"]]["shapes"])
+        if extras:
+            shown = ", ".join(extras[:8])
+            print("      note: %r: kept %d custom-only shape key(s) but moved them"
+                  " to the end of the stack so the FT file's key order is the"
+                  " exact prefix (rigs that bind by stack position stay aligned): %s%s"
+                  % (cn, len(extras), shown,
+                     " ..." if len(extras) > 8 else ""))
+        if missing:
+            shown = ", ".join(missing[:10])
+            print("      warning: %r: %d shape key(s) present in the FT file are"
+                  " absent from this mesh, so the stack has holes and stack-position"
+                  " bindings may still be off: %s%s"
+                  % (cn, len(missing), shown,
+                     " ..." if len(missing) > 10 else ""))
 
     # Blender renamed FBX exporter options between versions (use_anim ->
     # bake_anim in 3.6+); keep only the kwargs this build accepts.
